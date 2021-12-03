@@ -45,6 +45,18 @@ disp = 0
 # CODE USED FOR READING FILE FROM VIDEO FILE
 cap = cv2.VideoCapture(file)
 
+# Set Resolution and framerate
+# 320x240-------?fps
+# 640x480-------?fps
+# 1280x720------?fps
+# 1920x1080-----?
+cap.set(3, 1280)
+cap.set(4, 720)
+cap.set(5, 120)
+
+
+
+
 framecount = 0
 
 while cap.isOpened():
@@ -53,7 +65,7 @@ while cap.isOpened():
 	# Read an image
 	t, imgorig = cap.read()
 
-	if t == False:
+	if t == False or (cv2.waitKey(1) & 0xFF == ord('q')):
 		break
 
 	# Resize the image
@@ -186,6 +198,8 @@ while cap.isOpened():
 			cv2.drawContours(imgorig, contours, -1, (0,255,0), 1, offset=shift)
 		else:
 			print("Truncation Error")
+	else:
+		print("Blue Detection Error")
 	cv2.imshow('Contours', imgorig)
 
 # Print total time for frame
