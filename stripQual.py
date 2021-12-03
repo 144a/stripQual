@@ -1,7 +1,11 @@
 import sys
 import cv2
+import time
 import numpy as np
 from matplotlib import pyplot as plt
+
+# Record Start time for total FPS
+start = time.time()*1000.0
 
 # Define Upper-Lower Bound of threshold
 threshval = (20, 30)
@@ -38,152 +42,148 @@ print('Reading from file: ',file)
 # 1 is true, 0 is false
 disp = 1
 
-# Read an image
-imgorig = cv2.imread(file)
+# CODE USED FOR READING FILE FROM VIDEO FILE
+cap = cv2.VideoCapture(file)
 
-# Resize the image
-gray = imgresize(cv2.cvtColor(imgorig, cv2.COLOR_BGR2GRAY), 25)
-imgorig = imgresize(imgorig, 25)
-blue = imgorig.copy()
+framecount = 0
 
-# Convert Blue frame for color analysis
-blue = cv2.cvtColor(blue, cv2.COLOR_BGR2HSV)
+while cap.isOpened():
+	framecount = framecount + 1
 
+	# Read an image
+	t, imgorig = cap.read()
 
-# Show both images
-cv2.imshow('Original image',imgorig)
-if disp == 1:
-	cv2.imshow('Gray image', gray)
+	if t == False:
+		break
 
+	# Resize the image
+	gray = imgresize(cv2.cvtColor(imgorig, cv2.COLOR_BGR2GRAY), 25)
+	imgorig = imgresize(imgorig, 25)
+	blue = imgorig.copy()
 
-# Locate Blue test strip
-# Threshold for "blue" values (Blurs with 2x2 kernel)
-bluethresh = cv2.inRange(blue, bluethreshval[0], bluethreshval[1])
-
-# Morphology to determine contours
-kernel = np.ones((2,2),np.uint8)
-blueret = cv2.erode(bluethresh,kernel,iterations = 2)
-
-# Find Single Contour with greatest area
-bluecontours, hierarchy = cv2.findContours(blueret, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-rect = cv2.minAreaRect(bluecontours[0])
-angle = rect[2]
-
-if angle < -45:
-    angle = (90 + angle)
-
-# otherwise, just take the inverse of the angle to make
-# it positive
-else:
-    angle = -angle
-
-# rotate the image to deskew it
-(h, w) = gray.shape[:2]
-center = (w // 2, h // 2)
-M = cv2.getRotationMatrix2D(center, angle, 1.0)
-gray = cv2.warpAffine(gray, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
-
-if disp == 1:
-	cv2.imshow('rotation', gray)
+	# Convert Blue frame for color analysis
+	blue = cv2.cvtColor(blue, cv2.COLOR_BGR2HSV)
 
 
+	# Show both images
+	cv2.imshow('Original image',imgorig)
+	if disp == 1:
+		cv2.imshow('Gray image', gray)
 
-# cv2.drawContours(imgorig, bluecontours, -1, (0,255,0), 1)
+	# Locate Blue test strip
+	# Threshold for "blue" values (Blurs with 2x2 kernel)
+	bluethresh = cv2.inRange(blue, bluethreshval[0], bluethreshval[1])
 
-# Draw Bounding Box
-x, y, w, h = cv2.boundingRect(bluecontours[0])
-cv2.rectangle(imgorig, (x, y), (x+w, y+h), (0,0,255), 2)
+	# Morphology to determine contours
+	kernel = np.ones((2,2),np.uint8)
+	blueret = cv2.erode(bluethresh,kernel,iterations = 2)
 
-shift = (x+10, y+h+15)
+	# Find Single Contour with greatest area
+	bluecontours, hierarchy = cv2.findContours(blueret, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-if disp == 1:
-	cv2.imshow('Test Strip Thresh', imgorig)
+	if len(bluecontours) == 1:
 
-# Truncate Image
-gray = gray[(y+h+15):(((x+w)-x)*2+y+h-15), (x+10):(x+w-15)]
-if disp == 1:
-	cv2.imshow('truncated', gray)
+		rect = cv2.minAreaRect(bluecontours[0])
+		angle = rect[2]
 
-# Apply a Gaussian filter of size 15x15
-gSize = 5;
+		if angle < -45:
+    			angle = (90 + angle)
 
-# gray = imfilter(gray,fspecial('gaussian',[gSize,gSize],gSize/2),'replicate')
-blur = cv2.GaussianBlur(gray,(gSize,gSize),0)
+		# otherwise, just take the inverse of the angle to make
+		# it positive
+		else:
+			angle = -angle
 
-# Diplay Blur
-if disp == 1:
-	cv2.imshow('Gaussian Filter', blur)
+		# rotate the image to deskew it
+		(h, w) = gray.shape[:2]
+		center = (w // 2, h // 2)
+		M = cv2.getRotationMatrix2D(center, angle, 1.0)
+		gray = cv2.warpAffine(gray, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
-# Calulcate Laplacian for reference (absolute value, 1 or 0)
-# NOT TO BE USED DUE TO LACK OF ACCURACY
-laplacian = cv2.Laplacian(blur,cv2.CV_64F, ksize=13)
-
-# Sobel Filter
-sobelH = np.array([[1,0,-1],[2,0,-2],[1,0,-1]],dtype=np.float)
-sobelV = np.array([[1,2,1],[0,0,0],[-1,-2,-1]],dtype=np.float)
-
-# Calculate Gradient Magnitude for image
-
-# sh = cv2.filter2D(gray, -1, sobelH)
-# sv = cv2.filter2D(gray, -1, sobelV)
-# sm = np.sqrt(sh**2 + sv**2).astype(np.uint8)
-
-dx = cv2.Sobel(blur, cv2.CV_64F,1,0,sobelH)
-dy = cv2.Sobel(blur, cv2.CV_64F,0,1,sobelV)
-axy = cv2.magnitude(dx, dy).astype(np.uint8)
+		if disp == 1:
+			cv2.imshow('rotation', gray)
 
 
-# Display Stuff
-if disp == 1:
-	cv2.imshow('Laplacian (FOR REFERENCE)', laplacian)
-#	cv2.imshow('Sobel X Mask', sobelx)
-#	cv2.imshow('Sobel Y Mask', sobely)
-	cv2.imshow('Gradient Magnitude (Sobel Mask)', axy)
+		# Draw Bounding Box
+		x, y, w, h = cv2.boundingRect(bluecontours[0])
+		cv2.rectangle(imgorig, (x, y), (x+w, y+h), (0,0,255), 2)
 
-# Threshhold image
-#ret1, thresh = cv2.threshold(axy,threshval[0],threshval[1],cv2.THRESH_BINARY)
-thresh = cv2.inRange(axy, threshval[0], threshval[1], 255)
+		shift = (x+10, y+h+15)
 
-# threshadapt = cv2.adaptiveThreshold(axy,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
-# threshmean = cv2.adaptiveThreshold(axy,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,11,2)
+		if disp == 1:
+			cv2.imshow('Test Strip Thresh', imgorig)
 
-if disp == 1:
-	cv2.imshow('Threshold', thresh)
-# cv2.imshow('test2',threshadapt)
-# cv2.imshow('test3', threshmean)
+		# Truncate Image
+		gray = gray[(y+h+15):(((x+w)-x)*2+y+h-15), (x+10):(x+w-15)]
+		if disp == 1:
+			cv2.imshow('truncated', gray)
+
+		# Apply a Gaussian filter of size 15x15
+		gSize = 5;
+
+		blur = cv2.GaussianBlur(gray,(gSize,gSize),0)
+
+		# Diplay Blur
+		if disp == 1:
+			cv2.imshow('Gaussian Filter', blur)
+
+		# Sobel Filter
+		sobelH = np.array([[1,0,-1],[2,0,-2],[1,0,-1]],dtype=np.float)
+		sobelV = np.array([[1,2,1],[0,0,0],[-1,-2,-1]],dtype=np.float)
+
+		# Calculate Gradient Magnitude for image
+		dx = cv2.Sobel(blur, cv2.CV_64F,1,0,sobelH)
+		dy = cv2.Sobel(blur, cv2.CV_64F,0,1,sobelV)
+		axy = cv2.magnitude(dx, dy).astype(np.uint8)
 
 
-# Morphology to determine contours
-kernel = np.ones((1,1),np.uint8)
-ret = cv2.erode(thresh,kernel,iterations = 2)
+		# Display Stuff
+		if disp == 1:
+			cv2.imshow('Gradient Magnitude (Sobel Mask)', axy)
+
+		# Threshhold image
+		thresh = cv2.inRange(axy, threshval[0], threshval[1], 255)
+
+		if disp == 1:
+			cv2.imshow('Threshold', thresh)
+
+		# Morphology to determine contours
+		kernel = np.ones((1,1),np.uint8)
+		ret = cv2.erode(thresh,kernel,iterations = 2)
 
 
-kernel = np.ones((1,1),np.uint8)
-# dilate = cv2.dilate(thresh,kernel,iterations = 1)
-#ret = cv2.erode(ret,kernel,iterations = 2)
-ret = cv2.morphologyEx(ret, cv2.MORPH_CLOSE, kernel)
+		kernel = np.ones((1,1),np.uint8)
+		# dilate = cv2.dilate(thresh,kernel,iterations = 1)
+		#ret = cv2.erode(ret,kernel,iterations = 2)
+		ret = cv2.morphologyEx(ret, cv2.MORPH_CLOSE, kernel)
 
-kernel = np.ones((5,5),np.uint8)
-ret = cv2.morphologyEx(ret, cv2.MORPH_CLOSE, kernel)
+		kernel = np.ones((5,5),np.uint8)
+		ret = cv2.morphologyEx(ret, cv2.MORPH_CLOSE, kernel)
 
-kernel = np.ones((2,2),np.uint8)
-ret = cv2.dilate(ret,kernel,iterations = 2)
-if disp == 1:
-	cv2.imshow('Morphology', ret)
+		kernel = np.ones((2,2),np.uint8)
+		ret = cv2.dilate(ret,kernel,iterations = 2)
+		if disp == 1:
+			cv2.imshow('Morphology', ret)
 
-# Rotate back before determining contours
-(h, w) = ret.shape[:2]
-center = (w // 2, h // 2)
-M = cv2.getRotationMatrix2D(center, -angle, 1.0)
-gray = cv2.warpAffine(ret, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+		# Rotate back before determining contours
+		(h, w) = ret.shape[:2]
+		center = (w // 2, h // 2)
+		M = cv2.getRotationMatrix2D(center, -angle, 1.0)
+		gray = cv2.warpAffine(ret, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
 
 
-# Calculate Contours
-contours, hierarchy = cv2.findContours(ret, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-cv2.drawContours(imgorig, contours, -1, (0,255,0), 1, offset=shift)
+		# Calculate Contours
+		contours, hierarchy = cv2.findContours(ret, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+		cv2.drawContours(imgorig, contours, -1, (0,255,0), 1, offset=shift)
 
-cv2.imshow('Contours', imgorig)
+	cv2.imshow('Contours', imgorig)
+
+# Print total time for frame
+print('total time: ', time.time()*1000.0-start)
+
+print('Average FPS', framecount/((time.time()*1000.0-start)/1000))
+
+
 
 cv2.waitKey()
