@@ -40,7 +40,7 @@ print('Reading from file: ',file)
 
 # Show steps
 # 1 is true, 0 is false
-disp = 1
+disp = 0
 
 # CODE USED FOR READING FILE FROM VIDEO FILE
 cap = cv2.VideoCapture(file)
@@ -113,70 +113,79 @@ while cap.isOpened():
 		if disp == 1:
 			cv2.imshow('Test Strip Thresh', imgorig)
 
-		# Truncate Image
-		gray = gray[(y+h+15):(((x+w)-x)*2+y+h-15), (x+10):(x+w-15)]
-		if disp == 1:
-			cv2.imshow('truncated', gray)
+		# Check Truncated Boundaries
+		if (((x+w)-x)*2+y+h-15) > (y+h+15) and (x+w-15) > (x+10):
 
-		# Apply a Gaussian filter of size 15x15
-		gSize = 5;
+			print(y+h+15)
+			print((((x+w)-x)*2+y+h-15))
+			print(x+10)
+			print(x+w-15)
 
-		blur = cv2.GaussianBlur(gray,(gSize,gSize),0)
+			# Truncate Image
+			gray = gray[(y+h+15):(((x+w)-x)*2+y+h-15), (x+10):(x+w-15)]
+			if disp == 1:
+				cv2.imshow('truncated', gray)
 
-		# Diplay Blur
-		if disp == 1:
-			cv2.imshow('Gaussian Filter', blur)
+			# Apply a Gaussian filter of size 15x15
+			gSize = 5;
 
-		# Sobel Filter
-		sobelH = np.array([[1,0,-1],[2,0,-2],[1,0,-1]],dtype=np.float)
-		sobelV = np.array([[1,2,1],[0,0,0],[-1,-2,-1]],dtype=np.float)
+			blur = cv2.GaussianBlur(gray,(gSize,gSize),0)
 
-		# Calculate Gradient Magnitude for image
-		dx = cv2.Sobel(blur, cv2.CV_64F,1,0,sobelH)
-		dy = cv2.Sobel(blur, cv2.CV_64F,0,1,sobelV)
-		axy = cv2.magnitude(dx, dy).astype(np.uint8)
+			# Diplay Blur
+			if disp == 1:
+				cv2.imshow('Gaussian Filter', blur)
 
+			# Sobel Filter
+			sobelH = np.array([[1,0,-1],[2,0,-2],[1,0,-1]],dtype=np.float)
+			sobelV = np.array([[1,2,1],[0,0,0],[-1,-2,-1]],dtype=np.float)
 
-		# Display Stuff
-		if disp == 1:
-			cv2.imshow('Gradient Magnitude (Sobel Mask)', axy)
-
-		# Threshhold image
-		thresh = cv2.inRange(axy, threshval[0], threshval[1], 255)
-
-		if disp == 1:
-			cv2.imshow('Threshold', thresh)
-
-		# Morphology to determine contours
-		kernel = np.ones((1,1),np.uint8)
-		ret = cv2.erode(thresh,kernel,iterations = 2)
+			# Calculate Gradient Magnitude for image
+			dx = cv2.Sobel(blur, cv2.CV_64F,1,0,sobelH)
+			dy = cv2.Sobel(blur, cv2.CV_64F,0,1,sobelV)
+			axy = cv2.magnitude(dx, dy).astype(np.uint8)
 
 
-		kernel = np.ones((1,1),np.uint8)
-		# dilate = cv2.dilate(thresh,kernel,iterations = 1)
-		#ret = cv2.erode(ret,kernel,iterations = 2)
-		ret = cv2.morphologyEx(ret, cv2.MORPH_CLOSE, kernel)
+			# Display Stuff
+			if disp == 1:
+				cv2.imshow('Gradient Magnitude (Sobel Mask)', axy)
 
-		kernel = np.ones((5,5),np.uint8)
-		ret = cv2.morphologyEx(ret, cv2.MORPH_CLOSE, kernel)
+			# Threshhold image
+			thresh = cv2.inRange(axy, threshval[0], threshval[1], 255)
 
-		kernel = np.ones((2,2),np.uint8)
-		ret = cv2.dilate(ret,kernel,iterations = 2)
-		if disp == 1:
-			cv2.imshow('Morphology', ret)
+			if disp == 1:
+				cv2.imshow('Threshold', thresh)
 
-		# Rotate back before determining contours
-		(h, w) = ret.shape[:2]
-		center = (w // 2, h // 2)
-		M = cv2.getRotationMatrix2D(center, -angle, 1.0)
-		gray = cv2.warpAffine(ret, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+			# Morphology to determine contours
+			kernel = np.ones((1,1),np.uint8)
+			ret = cv2.erode(thresh,kernel,iterations = 2)
 
 
+			kernel = np.ones((1,1),np.uint8)
+			# dilate = cv2.dilate(thresh,kernel,iterations = 1)
+			#ret = cv2.erode(ret,kernel,iterations = 2)
+			ret = cv2.morphologyEx(ret, cv2.MORPH_CLOSE, kernel)
 
-		# Calculate Contours
-		contours, hierarchy = cv2.findContours(ret, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-		cv2.drawContours(imgorig, contours, -1, (0,255,0), 1, offset=shift)
+			kernel = np.ones((5,5),np.uint8)
+			ret = cv2.morphologyEx(ret, cv2.MORPH_CLOSE, kernel)
 
+			kernel = np.ones((2,2),np.uint8)
+			ret = cv2.dilate(ret,kernel,iterations = 2)
+			if disp == 1:
+				cv2.imshow('Morphology', ret)
+
+			# Rotate back before determining contours
+			(h, w) = ret.shape[:2]
+			center = (w // 2, h // 2)
+			M = cv2.getRotationMatrix2D(center, -angle, 1.0)
+			gray = cv2.warpAffine(ret, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+
+
+
+			# Calculate Contours
+			contours, hierarchy = cv2.findContours(ret, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+			cv2.drawContours(imgorig, contours, -1, (0,255,0), 1, offset=shift)
+		else:
+			print("Truncation Error")
 	cv2.imshow('Contours', imgorig)
 
 # Print total time for frame
@@ -186,4 +195,6 @@ print('Average FPS', framecount/((time.time()*1000.0-start)/1000))
 
 
 
-cv2.waitKey()
+# cv2.waitKey(0)
+cap.release()
+cv2.destroyAllWindows()
