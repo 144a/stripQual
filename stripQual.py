@@ -88,7 +88,8 @@ while cap.isOpened():
 
 	# Morphology to determine contours
 	kernel = np.ones((2,2),np.uint8)
-	blueret = cv2.erode(bluethresh,kernel,iterations = 2)
+	blueret = cv2.dilate(bluethresh,kernel,iterations = 2)
+	#blueret = cv2.erode(bluethresh,kernel,iterations = 2)
 
 	# Find Single Contour with greatest area
 	bluecontours, hierarchy = cv2.findContours(blueret, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -120,7 +121,7 @@ while cap.isOpened():
 		x, y, w, h = cv2.boundingRect(bluecontours[0])
 		cv2.rectangle(imgorig, (x, y), (x+w, y+h), (0,0,255), 2)
 
-		shift = (x+10, y+h+15)
+		shift = (int(x*1.05), int((y+h)*1.05))
 
 		if disp == 1:
 			cv2.imshow('Test Strip Thresh', imgorig)
@@ -134,7 +135,8 @@ while cap.isOpened():
 			print(x+w-15)
 
 			# Truncate Image
-			gray = gray[(y+h+15):(((x+w)-x)*2+y+h-15), (x+10):(x+w-15)]
+			#gray = gray[(y+h+15):(((x+w)-x)*2+y+h-15), (x+10):(x+w-15)]
+			gray = gray[int((y+h)*1.05):int((((x+w)-x)*2+y+h)*.95), int(x*1.05):int((x+w)*.95)]
 			if disp == 1:
 				cv2.imshow('truncated', gray)
 
@@ -209,6 +211,6 @@ print('Average FPS', framecount/((time.time()*1000.0-start)/1000))
 
 
 
-# cv2.waitKey(0)
+cv2.waitKey(0)
 cap.release()
 cv2.destroyAllWindows()
