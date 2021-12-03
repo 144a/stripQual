@@ -13,7 +13,7 @@ threshval = (20, 30)
 # Define Upper-Lower Bound of test strip threshold
 #bluethresh = (160,170)
 #bluethreshval = ((93,1,1), (98, 255, 255))
-bluethreshval = ((90,40,110), (100, 250, 250))
+bluethreshval = ((70,40,40), (120, 250, 250))
 
 # normaize the grayscale image
 # NO LONGER SIGNIFICANT, ONLY USE WHEN CREATING CUSTOM FILTERS
