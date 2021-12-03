@@ -2,7 +2,6 @@ import sys
 import cv2
 import time
 import numpy as np
-from matplotlib import pyplot as plt
 
 # Record Start time for total FPS
 start = time.time()*1000.0
@@ -13,7 +12,7 @@ threshval = (20, 30)
 # Define Upper-Lower Bound of test strip threshold
 #bluethresh = (160,170)
 #bluethreshval = ((93,1,1), (98, 255, 255))
-bluethreshval = ((70,40,40), (120, 250, 250))
+bluethreshval = ((90,60,120), (110, 250, 250))
 
 # normaize the grayscale image
 # NO LONGER SIGNIFICANT, ONLY USE WHEN CREATING CUSTOM FILTERS
@@ -94,6 +93,8 @@ while cap.isOpened():
 	# Find Single Contour with greatest area
 	bluecontours, hierarchy = cv2.findContours(blueret, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
+	print(len(bluecontours))
+
 	if len(bluecontours) == 1:
 
 		rect = cv2.minAreaRect(bluecontours[0])
@@ -127,8 +128,8 @@ while cap.isOpened():
 			cv2.imshow('Test Strip Thresh', imgorig)
 
 		# Check Truncated Boundaries
-		if (((x+w)-x)*2+y+h-15) > (y+h+15) and (x+w-15) > (x+10):
-
+		#if (int((y+h)*1.05 + 5) > int((((x+w)-x)*2+y+h)*.95) and (int(x*1.05) + 5) > int((x+w)*.95):
+		if int((y+h)*1.05) + 5 < int((((x+w)-x)*2+y+h)*.95) and int(x*1.05) + 5 < int((x+w)*.95):
 			print(y+h+15)
 			print((((x+w)-x)*2+y+h-15))
 			print(x+10)
